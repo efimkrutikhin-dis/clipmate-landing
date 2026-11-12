@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1672" height="941" viewBox="0 0 1672 941" preserveAspectRatio="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="hero-light" x1="0" y1="0" x2="0" y2="941" gradientUnits="userSpaceOnUse" color-interpolation="sRGB">
+      <stop offset="0" stop-color="#000000" />
+      <stop offset="0.34" stop-color="#000000" />
+      <stop offset="0.46" stop-color="#062014" />
+      <stop offset="0.58" stop-color="#0b5030" />
+      <stop offset="0.72" stop-color="#279b61" />
+      <stop offset="0.84" stop-color="#63e496" />
+      <stop offset="0.95" stop-color="#96edb6" />
+      <stop offset="1" stop-color="#b8f4ce" />
+    </linearGradient>
+  </defs>
+  <rect width="1672" height="941" fill="url(#hero-light)" />
+</svg>
