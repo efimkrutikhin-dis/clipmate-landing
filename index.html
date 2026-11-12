@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Клипмейт — нарежем любое видео</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#000;
+  --surface:#0c0c0c;
+  --surface-2:#141414;
+  --line:rgba(255,255,255,.08);
+  --line-2:rgba(255,255,255,.14);
+  --text:#fff;
+  --muted:rgba(255,255,255,.55);
+  --accent:#63e496;
+  --accent-16:rgba(99,228,150,.16);
+  --font:"SF Pro Display",-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",system-ui,sans-serif;
+  --container:min(100vw,1180px);
+  --pad:clamp(16px,4.6875vw,60px);
+  --ease-spring:linear(0,.454 12.7%,.828 22.7%,1.043 35.4%,1.057 43.1%,1.027 54%,1.006 67%,.999 82%,1);
+  --ease-out:cubic-bezier(.2,0,0,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html.lenis,html.lenis body{height:auto}
+.lenis.lenis-smooth{scroll-behavior:auto!important}
+.lenis.lenis-stopped{overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:16px;line-height:1.25;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+img,video,iframe{display:block}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+a{color:inherit;text-decoration:none}
+.wrap{width:var(--container);margin:0 auto;padding:0 var(--pad)}
+
+/* ---------- header ---------- */
+.nav{position:fixed;inset:0 0 auto 0;z-index:50;height:64px;display:flex;align-items:center;
+  background:linear-gradient(#000c,#0000);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;width:100%}
+.logo{display:flex;align-items:center;gap:10px;font-size:20px;letter-spacing:-.01em}
+.logo-mark{width:22px;height:22px;border-radius:6px;background:var(--accent);position:relative;transform:rotate(-8deg)}
+.logo-mark::after{content:"";position:absolute;inset:5px 9px 5px 5px;border-radius:2px;background:#000;opacity:.85}
+.nav-actions{display:flex;gap:8px}
+.pill{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:34px;padding:0 16px;border-radius:20px;
+  border:1px solid var(--line);font-size:13px;font-weight:500;transition:background .15s,transform .15s var(--ease-out)}
+.pill:hover{background:rgba(255,255,255,.06)}
+.pill:active{transform:scale(.96)}
+.pill.accent{background:var(--accent);border-color:var(--accent);color:#000;font-weight:600}
+.pill.accent:hover{background:#7aeca8}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:50px;padding:0 26px;border-radius:25px;
+  font-size:16px;font-weight:600;transition:transform .15s var(--ease-out),background .15s,box-shadow .2s}
+.btn:active{transform:scale(.96)}
+.btn.accent{background:var(--accent);color:#000}
+.btn.accent:hover{background:#7aeca8}
+.btn.ghost{border:1px solid var(--line-2)}
+.btn.ghost:hover{background:rgba(255,255,255,.06)}
+@media (max-width:640px){.nav-actions .pill:not(.accent){display:none}}
+
+/* ---------- hero ---------- */
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;padding:88px 0 48px;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero .wrap{position:relative;display:grid;grid-template-columns:1.12fr .88fr;gap:56px;align-items:center;width:var(--container)}
+.hero h1{font-size:clamp(48px,6.3vw,96px);line-height:.9;font-weight:600;letter-spacing:-.045em}
+.hero h1 .line{display:block;overflow:hidden;padding-bottom:.05em;white-space:nowrap}
+.hero h1 .line span{display:block}
+.hero p.lead{max-width:430px;margin-top:28px;font-size:17px;line-height:1.45;color:var(--muted)}
+.hero .cta{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-top:36px}
+.hero .cta .formats{font-size:12px;color:var(--muted);line-height:1.6}
+
+/* колонка видео с лёгким параллаксом */
+/* ровная вертикальная линия видео, плавно растворяется сверху и снизу */
+.stack{position:relative;width:min(100%,440px);height:min(80vh,700px);margin-left:auto;overflow:hidden;
+  -webkit-mask-image:linear-gradient(transparent,#000 18%,#000 82%,transparent);
+          mask-image:linear-gradient(transparent,#000 18%,#000 82%,transparent)}
+.v-card{position:absolute;left:0;right:0;top:0;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:#111;border:1px solid var(--line);will-change:transform}
+.media-fill{position:absolute;inset:0;overflow:hidden}
+.media-fill iframe{position:absolute;top:50%;left:50%;width:118%;height:118%;transform:translate(-50%,-50%);border:0;pointer-events:none}
+.media-fill .poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.shield{position:absolute;inset:0;z-index:1}
+.v-card .src{position:absolute;top:10px;left:10px;z-index:2;display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.v-card .src i{width:6px;height:6px;border-radius:1px}
+.v-card .src.rutube i{background:#2f6bff}
+.v-card .src.twitch i{background:#9146ff}
+
+/* общие бейджи площадок (карусель, лист шредера) */
+.badge{position:absolute;top:12px;left:12px;z-index:2;display:inline-flex;align-items:center;gap:7px;height:24px;padding:0 9px;border-radius:6px;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.badge i{width:6px;height:6px;border-radius:1px}
+.badge.rutube i{background:#2f6bff}
+.badge.twitch i{background:#9146ff}
+.badge.file i{background:var(--accent)}
+
+@media (max-width:900px){
+  .hero{min-height:auto}
+  .hero .wrap{grid-template-columns:1fr;gap:36px}
+  .stack{width:100%;max-width:520px;height:440px;margin:0}
+}
+
+/* ---------- sections ---------- */
+section.block{padding:120px 0 40px;position:relative}
+.sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:40px}
+.sec-head h2{font-size:clamp(36px,5vw,56px);font-weight:600;letter-spacing:-.02em;line-height:1}
+.sec-head p{max-width:420px;color:var(--muted);font-size:16px;line-height:1.4}
+.step-label{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);margin:0 0 14px}
+.step-label b{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent-16);color:var(--accent);font-size:12px;font-weight:600}
+
+/* carousel */
+.carousel{position:relative;overflow:hidden;margin:0 calc(var(--pad) * -1);padding:6px 0 10px;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);
+          mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
+.track{display:flex;gap:14px;width:max-content;animation:marquee 46s linear infinite}
+.carousel:hover .track{animation-play-state:paused}
+@keyframes marquee{to{transform:translateX(-50%)}}
+.pick{position:relative;flex:none;width:260px;aspect-ratio:16/9;border-radius:14px;overflow:hidden;border:1px solid var(--line);
+  background:#111;text-align:left;transition:transform .25s var(--ease-out),border-color .2s,box-shadow .2s}
+.pick:hover{transform:translateY(-4px)}
+.pick img{width:100%;height:100%;object-fit:cover;transition:transform .5s var(--ease-out)}
+.pick:hover img{transform:scale(1.05)}
+.pick::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 45%,rgba(0,0,0,.8))}
+.pick .t{position:absolute;left:12px;right:12px;bottom:10px;z-index:2;font-size:13px;font-weight:500;line-height:1.2}
+.pick .t small{display:block;margin-top:3px;font-size:11px;color:rgba(255,255,255,.6);font-weight:400}
+.pick .dur{position:absolute;top:12px;right:12px;z-index:2;font-size:11px;padding:3px 7px;border-radius:6px;background:rgba(0,0,0,.6)}
+.pick.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.pick.selected .dur{background:var(--accent);color:#000;font-weight:600}
+
+/* settings */
+.settings{display:grid;grid-template-columns:1fr 1.5fr;gap:14px;margin-top:40px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:26px;padding:24px}
+.panel h3{font-size:20px;font-weight:600;letter-spacing:-.01em;margin-bottom:6px}
+.panel .hint{font-size:13px;color:var(--muted);line-height:1.35}
+.dur-value{font-size:56px;font-weight:600;letter-spacing:-.03em;margin:22px 0 14px;font-variant-numeric:tabular-nums}
+.dur-value small{font-size:16px;color:var(--muted);font-weight:500;letter-spacing:0;margin-left:6px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--accent) var(--p,25%),rgba(255,255,255,.12) var(--p,25%))}
+input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:rgba(255,255,255,.12)}
+input[type=range]::-moz-range-progress{height:6px;border-radius:3px;background:var(--accent)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-9px;border-radius:50%;background:#fff;border:0;box-shadow:0 1px 4px rgba(0,0,0,.5);transition:box-shadow .2s}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#fff;border:0;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+input[type=range]:active::-webkit-slider-thumb{transform:scale(1.1)}
+.ticks{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px}
+
+.trans-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0 16px}
+.trans{border-radius:16px;border:1px solid var(--line);padding:8px 8px 10px;background:var(--surface-2);text-align:left;transition:border-color .2s,background .2s}
+.trans:hover{border-color:var(--line-2)}
+.trans.selected{border-color:var(--accent);background:rgba(99,228,150,.07)}
+.trans .demo{position:relative;aspect-ratio:16/10;border-radius:10px;overflow:hidden;background:#2a2a2a}
+.trans .demo .a,.trans .demo .b{position:absolute;inset:0;border-radius:inherit}
+.trans .demo .a{background:linear-gradient(135deg,#2b2b2b,#3b3b3b)}
+.trans .demo .a::before{content:"A";position:absolute;inset:0;display:grid;place-items:center;font-weight:600;color:rgba(255,255,255,.5);font-size:14px}
+.trans .demo .b{background:linear-gradient(135deg,#63e496,#2fb36a)}
+.trans .demo .b::before{content:"B";position:absolute;inset:0;display:grid;place-items:center;font-weight:600;color:#063;font-size:14px}
+.trans span{display:block;font-size:13px;font-weight:500;margin-top:8px}
+.trans[data-t=fade] .b{animation:t-fade 2.4s infinite}
+.trans[data-t=slide] .b{animation:t-slide 2.4s infinite var(--ease-out)}
+.trans[data-t=zoom] .b{animation:t-zoom 2.4s infinite var(--ease-out)}
+.trans[data-t=wipe] .b{animation:t-wipe 2.4s infinite var(--ease-out)}
+@keyframes t-fade{0%,30%{opacity:0}55%,90%{opacity:1}100%{opacity:0}}
+@keyframes t-slide{0%,30%{transform:translateX(100%)}55%,90%{transform:none}100%{transform:translateX(-100%)}}
+@keyframes t-zoom{0%,30%{transform:scale(0);opacity:0;border-radius:50%}55%,90%{transform:none;opacity:1}100%{opacity:0}}
+@keyframes t-wipe{0%,30%{clip-path:inset(0 100% 0 0)}55%,90%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 100%)}}
+.counts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted)}
+.counts b{color:var(--accent);font-weight:600}
+.counts .chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:6px;background:var(--accent-16)}
+.counts .chip b{font-size:14px}
+
+@media (max-width:900px){.settings{grid-template-columns:1fr}.trans-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* ---------- shredder ---------- */
+.shredder{position:relative;margin-top:56px;display:flex;flex-direction:column;align-items:center}
+.feed{position:relative;width:min(100%,680px);padding-bottom:26px;overflow:hidden;border-radius:0 0 4px 4px}
+.sheet{position:relative;width:100%;aspect-ratio:16/9;border-radius:20px;overflow:hidden;background:#0d0d0d;border:1px solid var(--line);
+  transform-origin:50% 100%}
+.sheet #stagePlayer,.sheet iframe,.sheet video{position:absolute;inset:0;width:100%;height:100%;border:0;object-fit:contain;background:#000}
+.sheet .snap{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;pointer-events:none}
+.sheet.feeding .snap{opacity:1}
+.sheet .badge{pointer-events:none}
+.sheet .stripes{position:absolute;inset:0;pointer-events:none;opacity:0;
+  background:repeating-linear-gradient(90deg,transparent 0 calc(25% - 1px),rgba(0,0,0,.9) calc(25% - 1px) 25%)}
+
+.drop-hint{position:absolute;inset:0;z-index:4;display:grid;place-items:center;text-align:center;border-radius:20px;
+  border:2px dashed var(--accent);background:rgba(0,0,0,.75);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .2s;font-size:18px;font-weight:600}
+.drop-hint small{display:block;font-size:13px;font-weight:400;color:var(--muted);margin-top:6px}
+.shredder.dragover .drop-hint{opacity:1}
+
+.slot{position:relative;z-index:3;width:min(100%,780px);height:72px;border-radius:24px;background:linear-gradient(#151515,#0a0a0a);
+  border:1px solid var(--line-2);box-shadow:0 20px 50px -20px #000,inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;padding:0 10px 0 10px;gap:8px}
+.slot::before,.slot::after{content:"";position:absolute;left:46px;right:46px;height:6px;border-radius:3px;background:#000;
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.05);transition:box-shadow .3s}
+.slot::before{top:-3px}
+.slot::after{bottom:-3px}
+.slot.busy::before,.slot.busy::after{box-shadow:inset 0 2px 4px #000,0 0 0 1px rgba(99,228,150,.6)}
+.slot .idle{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.slot .upload{flex:none;display:grid;place-items:center;width:48px;height:48px;border-radius:16px;background:rgba(255,255,255,.06);transition:background .15s}
+.slot .upload:hover{background:rgba(255,255,255,.12)}
+.slot input[type=text]{flex:1;min-width:0;height:48px;background:transparent;border:0;outline:0;color:var(--text);font:inherit;font-size:16px;padding:0 8px}
+.slot input[type=text]::placeholder{color:rgba(255,255,255,.4)}
+.slot .go{flex:none;height:52px;padding:0 24px;border-radius:18px;background:var(--accent);color:#000;font-weight:600;font-size:16px;
+  display:inline-flex;align-items:center;gap:8px;transition:transform .15s var(--ease-out),box-shadow .2s}
+.slot .go:hover{background:#7aeca8}
+.slot .go:active{transform:scale(.96)}
+.slot .go:disabled{opacity:.4;cursor:default;box-shadow:none}
+.slot .progress{position:absolute;inset:10px 14px;display:none;align-items:center;gap:14px}
+.slot.busy .idle,.slot.busy .go{display:none}
+.slot.busy .progress{display:flex}
+.progress .bar{flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
+.progress .bar i{display:block;height:100%;width:0;border-radius:inherit;background:var(--accent)}
+.progress .pct{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;min-width:66px;text-align:right}
+.progress .phase{font-size:13px;color:var(--muted);min-width:160px}
+.slot-note{margin-top:14px;font-size:12px;color:var(--muted);text-align:center;min-height:16px}
+.slot-note.err{color:#ff8a8a}
+
+.out{position:relative;width:min(100%,780px);margin-top:-1px;padding-top:6px;clip-path:inset(0 -100vw -100vh -100vw)}
+.clips{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0 4px;perspective:900px}
+.clip{position:relative;aspect-ratio:9/16;border-radius:16px;overflow:hidden;background:#111;border:1px solid var(--line);text-align:left;
+  transform-origin:50% 0;transition:box-shadow .2s,border-color .2s}
+.clip:hover{border-color:var(--accent)}
+.clip .img{position:absolute;inset:0;overflow:hidden}
+.clip .img img{position:absolute;top:50%;left:50%;height:134%;width:auto;max-width:none;transform:translate(-50%,-50%);transition:transform .5s var(--ease-out)}
+.clip .img img.full{height:100%}
+.clip .img iframe{position:absolute;top:0;left:50%;height:100%;width:auto;aspect-ratio:16/9;transform:translateX(-50%) scale(1.15);border:0;pointer-events:none}
+.clip:hover .img img{transform:translate(-50%,-50%) scale(1.06)}
+.clip::after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,.35),transparent 25%,transparent 55%,rgba(0,0,0,.85))}
+.clip .num{position:absolute;top:10px;left:10px;z-index:2;font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;background:var(--accent);color:#000}
+.clip .len{position:absolute;top:10px;right:10px;z-index:2;font-size:11px;padding:4px 7px;border-radius:6px;background:rgba(0,0,0,.6)}
+.clip .play{position:absolute;top:50%;left:50%;z-index:2;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;
+  background:rgba(255,255,255,.18);backdrop-filter:blur(8px);display:grid;place-items:center;transition:transform .2s var(--ease-out),background .2s}
+.clip:hover .play{transform:scale(1.1);background:var(--accent)}
+.clip:hover .play svg{fill:#000}
+.clip .play svg{fill:#fff;margin-left:3px}
+.clip .meta{position:absolute;left:10px;right:10px;bottom:10px;z-index:2;font-size:12px;line-height:1.3}
+.clip .meta b{display:block;font-size:13px;font-weight:600}
+.clip .meta span{color:rgba(255,255,255,.65)}
+.out-empty{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0 4px}
+.out-empty div{aspect-ratio:9/16;border-radius:16px;border:1px dashed rgba(255,255,255,.08)}
+.out .again{display:none;margin:22px auto 0}
+.out.done .again{display:flex}
+@media (max-width:640px){
+  .clips,.out-empty{grid-template-columns:repeat(2,1fr)}
+  .slot{height:auto;flex-wrap:wrap;padding:10px;border-radius:22px}
+  .slot .idle{flex-basis:100%}
+  .slot .go{flex:1;justify-content:center}
+  .slot.busy{height:72px}
+  .progress .phase{display:none}
+}
+
+/* ---------- modal ---------- */
+.modal{position:fixed;inset:0;z-index:100;display:none;place-items:center;background:rgba(0,0,0,.8);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.modal.open{display:grid;animation:fade .25s}
+.modal-inner{position:relative;display:flex;align-items:center;gap:18px}
+.phone{position:relative;height:min(82vh,700px);aspect-ratio:9/16;border-radius:28px;overflow:hidden;background:#000;border:1px solid var(--line-2);
+}
+.phone .frame{position:absolute;inset:0;overflow:hidden}
+.phone .frame .yt{position:absolute;top:0;left:50%;height:100%;aspect-ratio:16/9;transform:translateX(-50%)}
+.phone .frame .yt iframe{width:100%;height:100%;border:0}
+.phone .frame video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.phone .frame.t-fade{animation:m-fade .5s var(--ease-out)}
+.phone .frame.t-slide{animation:m-slide .55s var(--ease-out)}
+.phone .frame.t-zoom{animation:m-zoom .55s var(--ease-out)}
+.phone .frame.t-wipe{animation:m-wipe .6s var(--ease-out)}
+@keyframes m-fade{from{opacity:0}}
+@keyframes m-slide{from{transform:translateX(100%)}}
+@keyframes m-zoom{from{transform:scale(1.35);opacity:0}}
+@keyframes m-wipe{from{clip-path:inset(0 100% 0 0)}}
+.phone .info{position:absolute;left:0;right:0;bottom:0;padding:40px 16px 16px;background:linear-gradient(transparent,rgba(0,0,0,.85));font-size:13px;pointer-events:none}
+.phone .info b{display:block;font-size:15px;margin-bottom:2px}
+.phone .info span{color:rgba(255,255,255,.65)}
+.round{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid var(--line);display:grid;place-items:center;transition:background .15s}
+.round:hover{background:rgba(255,255,255,.16)}
+.round svg{stroke:#fff;fill:none;stroke-width:2}
+.close{position:absolute;top:-8px;right:-64px}
+@media (max-width:640px){.modal-inner{flex-direction:column}.modal-inner .round.nav-btn{display:none}.close{right:8px;top:8px;z-index:3}}
+
+/* ---------- benefits ---------- */
+.benefits{display:grid;grid-template-columns:1fr 1fr;gap:0 48px}
+.benefit{display:grid;grid-template-columns:auto 150px 1fr;gap:20px;align-items:start;padding:32px 0;border-bottom:1px solid var(--line)}
+.benefit .n{font-size:56px;font-weight:600;line-height:.85;letter-spacing:-.04em;color:transparent;-webkit-text-stroke:1.5px var(--accent)}
+.benefit .vid{position:relative;aspect-ratio:9/16;border-radius:14px;overflow:hidden;background:#111;border:1px solid var(--line)}
+.benefit .vid video{width:100%;height:100%;object-fit:cover}
+.benefit h3{font-size:22px;font-weight:600;letter-spacing:-.01em;line-height:1.1;margin-bottom:10px}
+.benefit p{font-size:15px;line-height:1.45;color:var(--muted)}
+.benefit .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.benefit .tags span{font-size:12px;padding:5px 8px;border-radius:6px;background:var(--accent-16);color:var(--accent)}
+@media (max-width:1000px){.benefits{grid-template-columns:1fr}}
+@media (max-width:520px){.benefit{grid-template-columns:auto 1fr}.benefit .vid{grid-column:2;width:150px}.benefit .txt{grid-column:1 / -1}}
+
+/* ---------- final ---------- */
+.final{margin:120px 0 0;padding:100px 0 80px;text-align:center;position:relative;overflow:hidden}
+.final h2{position:relative;font-size:clamp(40px,6vw,72px);font-weight:600;letter-spacing:-.03em;line-height:1}
+.final p{position:relative;color:var(--muted);margin:18px auto 32px;max-width:460px;line-height:1.4}
+.final .btn{position:relative}
+footer{border-top:1px solid var(--line);padding:28px 0;font-size:13px;color:var(--muted)}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="logo" href="#top"><span class="logo-mark"></span>Клипмейт</a>
+    <nav class="nav-actions">
+      <a class="pill" href="#benefits">Почему мы</a>
+      <a class="pill" href="#skills">Попробовать</a>
+      <a class="pill accent" href="https://clipmate.ru/" target="_blank" rel="noopener">Открыть приложение</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ======================= 1. HERO ======================= -->
+<section class="hero" id="top">
+  <div class="wrap">
+    <div class="hero-copy">
+      <h1><span class="line"><span>Нарежем</span></span><span class="line"><span>любое видео</span></span></h1>
+      <p class="lead">Дайте длинную запись — Клипмейт найдёт в ней лучшие моменты и нарежет вертикальные клипы с субтитрами.</p>
+      <div class="cta">
+        <a class="btn accent" href="#skills">Нарезать видео
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></a>
+        <span class="formats">YouTube и записи трансляций Twitch<br>MP4, MOV, MKV, WebM, AVI, MPEG</span>
+      </div>
+    </div>
+    <div class="stack" id="reel" aria-label="Примеры исходных видео"></div>
+  </div>
+</section>
+
+<!-- ======================= 2. ЧТО МЫ УМЕЕМ ======================= -->
+<section class="block" id="skills">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Что мы умеем</h2>
+      <p>Выберите видео или перетащите своё, настройте длину клипов и переход — и отправьте запись в шредер.</p>
+    </div>
+
+    <div class="step-label"><b>1</b>Выберите видео из ленты или загрузите своё ниже</div>
+    <div class="carousel"><div class="track" id="track"></div></div>
+
+    <div class="settings">
+      <div class="panel">
+        <div class="step-label" style="margin-bottom:10px"><b>2</b>Длина клипа</div>
+        <h3>Хронометраж нарезки</h3>
+        <p class="hint">Каждый клип будет примерно такой длины</p>
+        <div class="dur-value" id="durValue">0:45<small>мин</small></div>
+        <input type="range" id="dur" min="30" max="120" step="5" value="45" aria-label="Длина клипа в секундах">
+        <div class="ticks"><span>0:30</span><span>1:00</span><span>1:30</span><span>2:00</span></div>
+      </div>
+      <div class="panel">
+        <div class="step-label" style="margin-bottom:10px"><b>3</b>Переход между клипами</div>
+        <h3>Выберите переход</h3>
+        <div class="trans-grid" id="transGrid">
+          <button class="trans selected" data-t="fade"><div class="demo"><div class="a"></div><div class="b"></div></div><span>Наплыв</span></button>
+          <button class="trans" data-t="slide"><div class="demo"><div class="a"></div><div class="b"></div></div><span>Сдвиг</span></button>
+          <button class="trans" data-t="zoom"><div class="demo"><div class="a"></div><div class="b"></div></div><span>Зум</span></button>
+          <button class="trans" data-t="wipe"><div class="demo"><div class="a"></div><div class="b"></div></div><span>Шторка</span></button>
+        </div>
+        <div class="counts">Здесь 4 для примера. На платформе:
+          <span class="chip"><b>105</b> эффектов перехода</span>
+          <span class="chip"><b>16</b> готовых шаблонов</span>
+          <span class="chip"><b>306</b> шрифтов</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="shredder" id="shredder">
+      <div class="step-label" style="align-self:flex-start;margin-bottom:18px"><b>4</b>Отправьте видео в шредер</div>
+      <div class="feed">
+        <div class="sheet" id="sheet">
+          <div class="player" id="stagePlayer"></div>
+          <video id="stageVideo" playsinline muted controls hidden></video>
+          <img class="snap" id="snap" alt="">
+          <div class="stripes"></div>
+          <span class="badge rutube" id="stageBadge"><i></i>Rutube</span>
+          <div class="drop-hint"><div>Отпустите, чтобы загрузить<small>MP4, MOV, MKV, WebM, AVI или MPEG</small></div></div>
+        </div>
+      </div>
+
+      <div class="slot" id="slot">
+        <div class="idle">
+          <button class="upload" id="uploadBtn" title="Загрузить файл" aria-label="Загрузить файл">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>
+          </button>
+          <input type="file" id="file" accept="video/*,.mkv" hidden>
+          <input type="text" id="link" placeholder="Ссылка на Rutube или перетащите файл" autocomplete="off">
+        </div>
+        <button class="go" id="go">Нарезать видео
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></button>
+        <div class="progress">
+          <span class="phase" id="phase">Ищем лучшие моменты</span>
+          <div class="bar"><i id="bar"></i></div>
+          <span class="pct" id="pct">0%</span>
+        </div>
+      </div>
+      <div class="slot-note" id="note"></div>
+
+      <div class="out" id="out">
+        <div class="out-empty" id="outEmpty"><div></div><div></div><div></div><div></div></div>
+        <div class="clips" id="clips" hidden></div>
+        <button class="btn ghost again" id="again">Нарезать другое видео</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 3. ПРЕИМУЩЕСТВА ======================= -->
+<section class="block" id="benefits">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Почему Клипмейт</h2>
+      <p>Ролики ниже — настоящие клипы, сделанные в Клипмейте.</p>
+    </div>
+    <div class="benefits">
+      <article class="benefit">
+        <div class="n">01</div>
+        <div class="vid"><video data-src="https://clipmate.ru/media/clip-1.mp4" muted loop playsinline preload="none"></video></div>
+        <div class="txt">
+          <h3>Находит лучшие моменты</h3>
+          <p>Каждый момент оценивается по четырём критериям — и в клип попадает самое сильное.</p>
+          <div class="tags"><span>хук</span><span>эмоция</span><span>польза</span><span>законченность мысли</span></div>
+        </div>
+      </article>
+      <article class="benefit">
+        <div class="n">02</div>
+        <div class="vid"><video data-src="https://clipmate.ru/media/clip-3.mp4" muted loop playsinline preload="none"></video></div>
+        <div class="txt">
+          <h3>10–20 клипов с часа записи</h3>
+          <p>Клипы длятся от 30 до 90 секунд. Точное число зависит от содержания видео.</p>
+        </div>
+      </article>
+      <article class="benefit">
+        <div class="n">03</div>
+        <div class="vid"><video data-src="https://clipmate.ru/media/clip-5.mp4" muted loop playsinline preload="none"></video></div>
+        <div class="txt">
+          <h3>Стиль под ваш канал</h3>
+          <p>Шрифт и подача субтитров, кадр — по лицу, размытый фон или чёрные поля, переходы и своя музыка.</p>
+          <div class="tags"><span>306 шрифтов</span><span>105 переходов</span><span>16 шаблонов</span></div>
+        </div>
+      </article>
+      <article class="benefit">
+        <div class="n">04</div>
+        <div class="vid"><video data-src="https://clipmate.ru/media/clip-7.mp4" muted loop playsinline preload="none"></video></div>
+        <div class="txt">
+          <h3>Правки прямо в браузере</h3>
+          <p>Сдвиньте начало и конец, поправьте субтитры и название. Скачайте клип или все сразу архивом ZIP.</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="final">
+  <div class="wrap">
+    <h2>Попробуйте бесплатно</h2>
+    <p>Прикрепите ссылку на видео — Клипмейт нарежет его и смонтирует клипы.</p>
+    <a class="btn accent" href="https://clipmate.ru/" target="_blank" rel="noopener">Открыть приложение</a>
+  </div>
+</section>
+<footer><div class="wrap"><span>Клипмейт · прототип лендинга</span><span>Видео в примерах принадлежат их авторам</span></div></footer>
+
+<!-- modal -->
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Просмотр клипа">
+  <div class="modal-inner">
+    <button class="round nav-btn" id="prev" aria-label="Предыдущий клип"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="phone">
+      <div class="frame" id="frame"></div>
+      <div class="info" id="info"></div>
+      <button class="round close" id="close" aria-label="Закрыть"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <button class="round nav-btn" id="next" aria-label="Следующий клип"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
+<script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
+<script>
+/* ============ ДАННЫЕ ============ */
+// Популярные длинные ролики Rutube с официальных каналов (встраивание разрешено, работают в России без VPN)
+const RT_PIC = 'https://pic.rtbcdn.ru/video/';
+const SOURCES = [
+  {id:'6ac9a4ff6d5ca87d893f1d74ac0f127b', title:'Импровизация: Гарик Харламов', author:'Телеканал ТНТ', dur:2957, thumb:RT_PIC+'a2/4b/a24b81a15f6053ab5aa661d80703137f.jpg'},
+  {id:'3183197cf8c72fdee2a103b76d594ac5', title:'Шоу Воли, 1 выпуск', author:'Телеканал ТНТ', dur:3542, thumb:RT_PIC+'99/9e/999e34e8304c184ea8782b7c4499501d.jpg'},
+  {id:'8cca28725774c23bd9eb486d80488615', title:'Камеди Клаб, 11 сезон, 28 выпуск', author:'Comedy Club', dur:2765, thumb:RT_PIC+'55/24/552438bd7217d35acb57de88a890d33a.jpg'},
+  {id:'719a6eab5b2a98f31a817061597120e0', title:'Битва шефов. Звёзды, 1 выпуск', author:'Пятница', dur:6002, thumb:RT_PIC+'2025-06-16/a8/55/a855d02dca571b0b6a53f0990d9d2285.jpg'},
+  {id:'0ad6b314322887928535ccca664214fd', title:'Импровизация: Нурлан Сабуров', author:'Телеканал ТНТ', dur:2819, thumb:RT_PIC+'b3/55/b355fced0b03d9729c8f74e44912f5e5.jpg'},
+  {id:'83236d5e60fad8b72324561da4c2b8a8', title:'Англия — Аргентина. Обзор матча', author:'МАТЧ!', dur:578, thumb:RT_PIC+'2026-07-16/76/0f/760fae53bf97babd3ce6d4b6041e25ba.jpg'},
+  {id:'d54e6ea9464be7af0acfaba497a00e51', title:'Импровизация: Александр Гудков', author:'Телеканал ТНТ', dur:2982, thumb:RT_PIC+'1f/4e/1f4e64fab8e1434d1413db7870e3c5fc.jpg'},
+];
+// Первый экран: Rutube + популярные клипы Twitch
+const REEL = [
+  {platform:'rutube', id:'3183197cf8c72fdee2a103b76d594ac5', start:420, caption:'Телеканал ТНТ · Шоу Воли'},
+  {platform:'twitch', clip:'HungryIncredulousBubbleteaDoritosChip-j1urRwWlV2uIW8SS', caption:'buster · Twitch-клип'},
+  {platform:'rutube', id:'8cca28725774c23bd9eb486d80488615', start:300, caption:'Comedy Club · Камеди Клаб'},
+  {platform:'twitch', clip:'RepleteBoredBulgogiLeeroyJenkins-Di2wIExzYgBZuXEF', caption:'buster · Twitch-клип'},
+  {platform:'rutube', id:'83236d5e60fad8b72324561da4c2b8a8', start:60, caption:'МАТЧ! · Англия — Аргентина'},
+];
+const PLATFORM_NAME = {rutube:'Rutube', twitch:'Twitch', file:'Ваш файл'};
+const host = location.hostname || 'localhost';
+// Twitch пускает встраивание только с перечисленных доменов
+const TWITCH_PARENTS = [...new Set([host, 'localhost', 'claude.ai', 'clipmate.ru'])].map(h => 'parent=' + h).join('&');
+const rtThumb = id => (SOURCES.find(s => s.id === id) || {}).thumb || `https://rutube.ru/api/video/${id}/thumbnail/?redirect=1`;
+const fmt = s => { s=Math.round(s); const h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=String(s%60).padStart(2,'0'); return h? `${h}:${String(m).padStart(2,'0')}:${x}` : `${m}:${x}`; };
+const $ = s => document.querySelector(s);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// ?silent в адресе — всё без звука (для проверок)
+const SILENT = new URLSearchParams(location.search).has('silent');
+
+/* ============ Плеер Rutube: встраивание + управление через postMessage ============ */
+// Команды и события: player:mute, player:play, player:setCurrentTime, player:currentTime, player:durationChange…
+const rtFrames = new Map();
+addEventListener('message', e => {
+  if (!/(^|\.)rutube\.ru$/.test((() => { try { return new URL(e.origin).hostname; } catch(_) { return ''; } })())) return;
+  let m; try { m = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch(_) { return; }
+  const rec = rtFrames.get(e.source);
+  if (rec && m && m.type) rec.handle(m);
+});
+function rtSend(f, type, data = {}){ try { f.contentWindow.postMessage(JSON.stringify({type, data}), '*'); } catch(_){} }
+/* opts: id, start, end, autoplay, muted, loop, controls, onDuration */
+function makeRutube(container, o){
+  const f = document.createElement('iframe');
+  const q = new URLSearchParams({t: Math.round(o.start || 0)});
+  if (o.end) q.set('stopTime', Math.round(o.end));
+  if (o.autoplay !== false) q.set('autoplay', 'true');
+  f.src = `https://rutube.ru/play/embed/${o.id}/?${q}`;
+  f.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
+  f.setAttribute('frameborder', '0');
+  container.appendChild(f);
+  const muteIfNeeded = () => { if (o.muted) rtSend(f, 'player:mute'); };
+  const rec = { handle(m){
+    const d = m.data || {};
+    if (m.type === 'player:init' || m.type === 'player:ready'){
+      muteIfNeeded();
+      if (!o.controls) rtSend(f, 'player:hideControls');
+      if (o.autoplay !== false) rtSend(f, 'player:play');
+    }
+    if (m.type === 'player:playStart' || (m.type === 'player:changeState' && d.state === 'playing')) muteIfNeeded();
+    if (m.type === 'player:durationChange' && o.onDuration && d.duration) o.onDuration(d.duration);
+    if (o.loop && o.end && m.type === 'player:currentTime' && (d.time || d.currentTime) >= o.end - .4) rtSend(f, 'player:setCurrentTime', {time:o.start || 0});
+    if (o.loop && (m.type === 'player:playComplete' || (m.type === 'player:changeState' && d.state === 'completed'))){
+      rtSend(f, 'player:setCurrentTime', {time:o.start || 0}); rtSend(f, 'player:play');
+    }
+  }};
+  rtFrames.set(f.contentWindow, rec);
+  f.addEventListener('load', muteIfNeeded);
+  return f;
+}
+function parseRutube(url){
+  const m = url.match(/rutube\.ru\/(?:video|play\/embed|shorts)\/(?:private\/)?([0-9a-f]{32})/i);
+  return m ? m[1] : null;
+}
+
+/* ============ 1. HERO: колонка видео + лёгкий параллакс ============ */
+const HAS_GSAP = !!window.gsap;
+if (HAS_GSAP && window.ScrollTrigger) gsap.registerPlugin(ScrollTrigger);
+(function initStack(){
+  const stack = $('#reel');
+  const cards = REEL.map(item => {
+    const el = document.createElement('div');
+    el.className = 'v-card';
+    const poster = item.platform === 'rutube' ? `<img class="poster" src="${rtThumb(item.id)}" alt="">` : '';
+    const twitch = item.platform === 'twitch'
+      ? `<iframe src="https://clips.twitch.tv/embed?clip=${item.clip}&${TWITCH_PARENTS}&autoplay=true&muted=true" allow="autoplay; encrypted-media" title="${item.caption}" tabindex="-1"></iframe>` : '';
+    el.innerHTML = `<div class="media-fill">${poster}${twitch}</div><div class="shield"></div>
+      <span class="src ${item.platform}"><i></i>${PLATFORM_NAME[item.platform]}</span>`;
+    stack.appendChild(el);
+    if (item.platform === 'rutube'){
+      const f = makeRutube(el.querySelector('.media-fill'), {id:item.id, start:item.start, end:item.start + 90, muted:true, loop:true});
+      f.title = item.caption; f.tabIndex = -1;
+    }
+    return el;
+  });
+  // бесконечная линия: карточки плывут вверх и незаметно переезжают вниз (за fade)
+  const GAP = 16;
+  let offset = 0;
+  function layout(){
+    const step = cards[0].offsetHeight + GAP, total = step * cards.length;
+    cards.forEach((c,i) => {
+      const y = ((i*step - offset) % total + total) % total - step;
+      c.style.transform = `translate3d(0,${y}px,0)`;
+    });
+  }
+  const tick = dt => { if (!reduceMotion) offset += dt * 0.025; layout(); };
+  if (HAS_GSAP) gsap.ticker.add((t, dt) => tick(Math.min(dt, 50)));
+  else { let last = performance.now(); (function f(now){ tick(Math.min(now-last, 50)); last = now; requestAnimationFrame(f); })(last); }
+  addEventListener('resize', layout);
+  if (!HAS_GSAP || reduceMotion) return;
+  // появление
+  gsap.from(stack, {opacity:0, y:30, duration:1.2, ease:'expo.out', delay:.2});
+  // лёгкий параллакс при прокрутке: линия уходит чуть медленнее страницы
+  if (window.ScrollTrigger) gsap.to(stack, {yPercent:12, ease:'none',
+    scrollTrigger:{trigger:'.hero', start:'top top', end:'bottom top', scrub:true}});
+  // параллакс от мыши: небольшое смещение на разную глубину
+  const movers = cards.map(c => {
+    const inner = c.querySelector('.media-fill');
+    return {x: gsap.quickTo(inner, 'x', {duration:.8, ease:'power3'}), y: gsap.quickTo(inner, 'y', {duration:.8, ease:'power3'})};
+  });
+  const depth = [10, 16, 12, 14, 11];
+  $('.hero').addEventListener('mousemove', e => {
+    const nx = e.clientX / innerWidth - .5, ny = e.clientY / innerHeight - .5;
+    movers.forEach((m,i) => { m.x(-nx * depth[i]); m.y(-ny * depth[i]); });
+  });
+})();
+
+/* появление первого экрана */
+if (HAS_GSAP && !reduceMotion){
+  gsap.timeline({defaults:{ease:'expo.out'}})
+    .from('.hero h1 .line span', {yPercent:110, duration:1.1, stagger:.12})
+    .from('.hero .lead, .hero .cta', {y:14, opacity:0, duration:.8, stagger:.08}, '-=.7');
+}
+
+/* ============ 2. Карусель выбора ============ */
+const state = { source:null, duration:45, transition:'fade', clips:[], busy:false };
+(function initCarousel(){
+  const track = $('#track');
+  const html = SOURCES.map((s,i) => `
+    <button class="pick" data-i="${i}" aria-label="Выбрать: ${s.title}">
+      <img src="${s.thumb}" alt="" loading="lazy">
+      <span class="badge rutube"><i></i>Rutube</span>
+      <span class="dur">${fmt(s.dur)}</span>
+      <span class="t">${s.title}<small>${s.author}</small></span>
+    </button>`).join('');
+  track.innerHTML = html + html; // дубль для бесшовной прокрутки
+  track.addEventListener('click', e => {
+    const b = e.target.closest('.pick'); if (!b || state.busy) return;
+    const s = SOURCES[+b.dataset.i];
+    selectSource({type:'rutube', id:s.id, title:s.title, author:s.author, dur:s.dur, thumb:s.thumb});
+  });
+})();
+
+function markSelected(){
+  document.querySelectorAll('.pick').forEach(p => {
+    const s = SOURCES[+p.dataset.i];
+    p.classList.toggle('selected', !!state.source && state.source.type==='rutube' && state.source.id === s.id);
+  });
+}
+
+/* ============ Плеер на «листе» ============ */
+let stageFrame = null;
+function loadStage(src){
+  const vid = $('#stageVideo'), holder = $('#stagePlayer');
+  const badge = $('#stageBadge');
+  badge.className = 'badge ' + src.type;
+  badge.innerHTML = `<i></i>${PLATFORM_NAME[src.type]}`;
+  holder.innerHTML = ''; stageFrame = null;
+  if (src.type === 'rutube'){
+    vid.pause(); vid.hidden = true; holder.style.display = '';
+    $('#snap').src = src.thumb || rtThumb(src.id);
+    stageFrame = makeRutube(holder, {id:src.id, start:Math.round((src.dur || 600) * 0.1), muted:true, controls:true,
+      onDuration: d => { if (state.source === src) src.dur = d; }});
+  } else {
+    holder.style.display = 'none';
+    vid.hidden = false; vid.src = src.url; vid.play().catch(()=>{});
+  }
+}
+function selectSource(src){
+  state.source = src;
+  markSelected();
+  resetOut();
+  returnSheet();
+  loadStage(src);
+  note(src.type==='file' ? `Загружен файл «${src.title}»` : `Выбрано: ${src.title} · ${src.author}`);
+}
+function note(t, err){ const n = $('#note'); n.textContent = t || ''; n.classList.toggle('err', !!err); }
+
+/* ============ Настройки ============ */
+const dur = $('#dur');
+function setDur(){
+  state.duration = +dur.value;
+  $('#durValue').innerHTML = `${fmt(state.duration)}<small>мин</small>`;
+  dur.style.setProperty('--p', ((dur.value-dur.min)/(dur.max-dur.min)*100)+'%');
+}
+dur.addEventListener('input', setDur); setDur();
+$('#transGrid').addEventListener('click', e => {
+  const b = e.target.closest('.trans'); if (!b) return;
+  document.querySelectorAll('.trans').forEach(t => t.classList.toggle('selected', t===b));
+  state.transition = b.dataset.t;
+});
+
+/* ============ Загрузка: ссылка / файл / drag&drop ============ */
+$('#link').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#go').click(); } });
+$('#link').addEventListener('change', () => applyLink());
+function applyLink(){
+  const v = $('#link').value.trim(); if (!v) return false;
+  const id = parseRutube(v);
+  if (!id){
+    if (/twitch\.tv|youtu/.test(v)) note('В прототипе работают ссылки Rutube и файлы. Ссылки YouTube и Twitch подключим в рабочей версии.', true);
+    else note('Не получилось распознать ссылку. Вставьте ссылку на видео Rutube.', true);
+    return false;
+  }
+  if (state.source && state.source.id === id) return true;
+  selectSource({type:'rutube', id, title:'Видео по ссылке', author:'Rutube', dur:0, thumb:rtThumb(id)});
+  return true;
+}
+$('#uploadBtn').addEventListener('click', () => $('#file').click());
+$('#file').addEventListener('change', e => { if (e.target.files[0]) useFile(e.target.files[0]); });
+function useFile(f){
+  if (!f.type.startsWith('video/') && !/\.(mkv|mov|avi|mpe?g|webm|mp4)$/i.test(f.name)) { note('Это не похоже на видеофайл', true); return; }
+  const url = URL.createObjectURL(f);
+  const v = document.createElement('video'); v.preload = 'metadata'; v.src = url; v.muted = true;
+  v.onloadedmetadata = () => selectSource({type:'file', url, title:f.name, author:'Ваш файл', dur:v.duration});
+  v.onerror = () => note('Браузер не умеет показывать этот формат — попробуйте MP4 или WebM', true);
+}
+const shred = $('#shredder');
+['dragenter','dragover'].forEach(ev => shred.addEventListener(ev, e => { e.preventDefault(); if(!state.busy) shred.classList.add('dragover'); }));
+['dragleave','drop'].forEach(ev => shred.addEventListener(ev, e => { e.preventDefault(); if (ev==='dragleave' && shred.contains(e.relatedTarget)) return; shred.classList.remove('dragover'); }));
+shred.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f && !state.busy) useFile(f); });
+
+/* ============ ШРЕДЕР ============ */
+const PHASES = ['Ищем лучшие моменты','Оцениваем хук и эмоцию','Режем по кадру','Собираем вертикальные клипы'];
+$('#go').addEventListener('click', async () => {
+  if (state.busy) return;
+  if ($('#link').value.trim() && !applyLink()) return;
+  if (!state.source){ note('Сначала выберите видео в ленте, вставьте ссылку или перетащите файл', true); return; }
+  state.busy = true;
+  const src = state.source;
+  if (src.type==='rutube' && stageFrame) rtSend(stageFrame, 'player:pause');
+  if (src.type==='file') { $('#snap').src = frameOf($('#stageVideo')); $('#stageVideo').pause(); }
+  if (!src.dur) src.dur = 900;
+
+  const clips = makeClips(src);
+  const thumbsReady = src.type==='file' ? fileThumbs(src, clips) : Promise.resolve();
+
+  resetOut();
+  note('');
+  const slot = $('#slot');
+  slot.classList.add('busy');
+  await Promise.all([feedSheet(), runProgress(3200)]);
+  await thumbsReady;
+  slot.classList.remove('busy');
+  renderClips(clips);
+  state.busy = false;
+});
+
+/* лист уходит в щель: чуть приподнимается, затем втягивается и режется на полосы */
+function feedSheet(){
+  const sheet = $('#sheet'), stripes = sheet.querySelector('.stripes');
+  sheet.classList.add('feeding');
+  if (!HAS_GSAP) { sheet.style.visibility = 'hidden'; return Promise.resolve(); }
+  const dist = sheet.offsetHeight + 40;
+  return new Promise(res => {
+    gsap.timeline({onComplete:res})
+      .set(sheet, {transformPerspective:900, transformOrigin:'50% 100%'})
+      .to(sheet, {y:-12, rotationX:6, duration:.35, ease:'power2.out'})
+      .to(sheet, {y:dist, rotationX:-14, scaleX:.96, duration:2.3, ease:'power2.in'})
+      .to(stripes, {opacity:1, duration:.6, ease:'none'}, '-=1.5')
+      .to('#slot', {y:3, duration:.08, repeat:9, yoyo:true, ease:'none'}, '-=1.6');
+  });
+}
+/* лист возвращается сверху */
+function returnSheet(){
+  const sheet = $('#sheet'), stripes = sheet.querySelector('.stripes');
+  sheet.classList.remove('feeding');
+  sheet.style.visibility = '';
+  if (!HAS_GSAP) return;
+  gsap.killTweensOf([sheet, stripes]);
+  gsap.set(stripes, {opacity:0});
+  gsap.fromTo(sheet, {y:-50, opacity:0, rotationX:0, scaleX:1}, {y:0, opacity:1, duration:.9, ease:'expo.out'});
+}
+function runProgress(ms){
+  if (HAS_GSAP) return new Promise(res => {
+    const o = {v:0}, bar = $('#bar'), pct = $('#pct'), ph = $('#phase');
+    gsap.to(o, {v:100, duration:ms/1000, ease:'power1.inOut', onComplete:() => setTimeout(res, 200), onUpdate(){
+      bar.style.width = o.v + '%'; pct.textContent = Math.round(o.v) + '%';
+      ph.textContent = PHASES[Math.min(PHASES.length-1, Math.floor(o.v/100*PHASES.length))];
+    }});
+  });
+  return new Promise(res => {
+    const t0 = performance.now(), bar = $('#bar'), pct = $('#pct'), ph = $('#phase');
+    (function f(now){
+      const k = Math.min((now - t0)/ms, 1);
+      const e = k<.5 ? 2*k*k : 1 - Math.pow(-2*k+2,2)/2;
+      bar.style.width = (e*100)+'%'; pct.textContent = Math.round(e*100)+'%';
+      ph.textContent = PHASES[Math.min(PHASES.length-1, Math.floor(k*PHASES.length))];
+      k < 1 ? requestAnimationFrame(f) : setTimeout(res, 200);
+    })(t0);
+  });
+}
+function makeClips(src){
+  const L = state.duration, D = src.dur;
+  const marks = [.12, .3, .52, .76];
+  return marks.map((f,i) => {
+    let start = Math.max(0, Math.round(D*f));
+    let len = Math.min(L, Math.max(5, Math.floor(D - start)));
+    if (start + len > D) start = Math.max(0, Math.floor(D - len));
+    return { n:i+1, start, end:start+len, len, src,
+             thumb: src.type==='rutube' ? (src.thumb || rtThumb(src.id)) : null };
+  });
+}
+function renderClips(clips){
+  state.clips = clips;
+  const wrap = $('#clips');
+  wrap.innerHTML = clips.map((c,i) => `
+    <button class="clip" data-i="${i}" aria-label="Смотреть клип ${c.n}">
+      <div class="img"><img src="${c.thumb}" alt="" class="full" style="${c.src.type==='rutube' ? `left:${32 + i*12}%` : ''}"></div>
+      <span class="num">Клип ${c.n}</span>
+      <span class="len">${fmt(c.len)}</span>
+      <span class="play"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg></span>
+      <span class="meta"><b>${fmt(c.start)} – ${fmt(c.end)}</b><span>из «${c.src.title.length>28? c.src.title.slice(0,28)+'…' : c.src.title}»</span></span>
+    </button>`).join('');
+  $('#outEmpty').hidden = true; wrap.hidden = false;
+  // клипы выезжают из щели, как снимки из Instax
+  if (HAS_GSAP){
+    gsap.fromTo(wrap.children,
+      {yPercent:-104, rotationX:-60, scaleY:.85, transformPerspective:900, transformOrigin:'50% 0%'},
+      {yPercent:0, rotationX:0, scaleY:1, duration:1.3, ease:'elastic.out(1,.65)', stagger:.16,
+       onComplete:() => $('#out').classList.add('done')});
+  } else $('#out').classList.add('done');
+  // живое превью отрезка (без звука, по кругу) поверх обложки
+  if (clips[0] && clips[0].src.type === 'rutube'){
+    [...wrap.children].forEach((el, i) => {
+      const c = clips[i];
+      setTimeout(() => makeRutube(el.querySelector('.img'), {id:c.src.id, start:c.start, end:c.end, muted:true, loop:true}), 900 + i*250);
+    });
+  }
+}
+function resetOut(){
+  $('#clips').hidden = true; $('#clips').innerHTML = '';
+  $('#outEmpty').hidden = false; $('#out').classList.remove('done');
+}
+wrapClick();
+function wrapClick(){
+  $('#clips').addEventListener('click', e => { const b = e.target.closest('.clip'); if (b) openModal(+b.dataset.i); });
+}
+$('#again').addEventListener('click', () => {
+  resetOut();
+  returnSheet();
+  if (state.source && state.source.type==='rutube' && stageFrame) rtSend(stageFrame, 'player:play');
+  if (state.source && state.source.type==='file') $('#stageVideo').play().catch(()=>{});
+  scrollToEl(document.querySelector('.carousel'), -160);
+});
+
+/* кадры из своего файла */
+function frameOf(video){
+  try{
+    const c = document.createElement('canvas'); c.width = 640; c.height = Math.round(640 * (video.videoHeight||9) / (video.videoWidth||16));
+    c.getContext('2d').drawImage(video, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', .8);
+  }catch(e){ return ''; }
+}
+function fileThumbs(src, clips){
+  return new Promise(res => {
+    const v = document.createElement('video'); v.muted = true; v.preload = 'auto'; v.src = src.url;
+    let i = 0;
+    const next = () => { if (i >= clips.length) return res(); v.currentTime = Math.min(clips[i].start + 1, src.dur - .1); };
+    v.addEventListener('seeked', () => {
+      const c = document.createElement('canvas'), h = 640, w = Math.round(h*9/16);
+      c.width = w; c.height = h;
+      const vw = v.videoWidth, vh = v.videoHeight, sw = vh*9/16;
+      c.getContext('2d').drawImage(v, (vw-sw)/2, 0, sw, vh, 0, 0, w, h);
+      clips[i].thumb = c.toDataURL('image/jpeg', .8); i++; next();
+    });
+    v.addEventListener('loadeddata', next, {once:true});
+    v.addEventListener('error', res, {once:true});
+    setTimeout(res, 6000);
+  });
+}
+
+/* ============ Модальное окно с клипом ============ */
+let modalIndex = 0;
+function openModal(i){
+  modalIndex = i;
+  $('#modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  if (window.lenis) lenis.stop();
+  showClip();
+}
+function showClip(){
+  const c = state.clips[modalIndex]; if (!c) return;
+  const frame = $('#frame');
+  frame.innerHTML = '';
+  frame.className = 'frame'; void frame.offsetWidth; frame.classList.add('t-' + state.transition);
+  if (c.src.type === 'rutube'){
+    const box = document.createElement('div'); box.className = 'yt'; frame.appendChild(box);
+    // звук включается, только если страница открыта без ?silent
+    makeRutube(box, {id:c.src.id, start:c.start, end:c.end, muted:SILENT, loop:true});
+  } else {
+    frame.innerHTML = `<video src="${c.src.url}" playsinline autoplay></video>`;
+    const v = frame.querySelector('video');
+    v.muted = SILENT;
+    v.currentTime = c.start;
+    v.addEventListener('timeupdate', () => { if (v.currentTime >= c.end) v.currentTime = c.start; });
+    v.play().catch(()=>{ v.muted = true; v.play(); });
+  }
+  const tName = {fade:'Наплыв', slide:'Сдвиг', zoom:'Зум', wipe:'Шторка'}[state.transition];
+  $('#info').innerHTML = `<b>Клип ${c.n} из ${state.clips.length}</b><span>${fmt(c.start)} – ${fmt(c.end)} · переход «${tName}»</span>`;
+}
+function closeModal(){
+  $('#modal').classList.remove('open'); document.body.style.overflow = '';
+  if (window.lenis) lenis.start();
+  $('#frame').innerHTML = '';
+}
+$('#close').addEventListener('click', closeModal);
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+$('#prev').addEventListener('click', () => { modalIndex = (modalIndex - 1 + state.clips.length) % state.clips.length; showClip(); });
+$('#next').addEventListener('click', () => { modalIndex = (modalIndex + 1) % state.clips.length; showClip(); });
+addEventListener('keydown', e => {
+  if (!$('#modal').classList.contains('open')) return;
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'ArrowRight') $('#next').click();
+  if (e.key === 'ArrowLeft') $('#prev').click();
+});
+
+/* ============ 3. Преимущества: появление и видео по мере прокрутки ============ */
+// видео в карточках грузятся и играют, только когда видны (без звука)
+const io = new IntersectionObserver(entries => entries.forEach(en => {
+  const v = en.target.querySelector('video');
+  if (en.isIntersecting){
+    if (v && !v.src) v.src = v.dataset.src;
+    v && v.play().catch(()=>{});
+  } else if (v) v.pause();
+}), {threshold:.25});
+document.querySelectorAll('.benefit').forEach(b => io.observe(b));
+
+/* ============ Плавная прокрутка (Lenis) + появления (ScrollTrigger) ============ */
+if (window.Lenis && !reduceMotion){
+  window.lenis = new Lenis({lerp:.1});
+  if (HAS_GSAP){
+    lenis.on('scroll', () => { if (window.ScrollTrigger) ScrollTrigger.update(); });
+    gsap.ticker.add(t => lenis.raf(t * 1000));
+    gsap.ticker.lagSmoothing(0);
+  } else {
+    (function raf(t){ lenis.raf(t); requestAnimationFrame(raf); })(performance.now());
+  }
+}
+function scrollToEl(el, offset = -70){
+  if (!el) return;
+  if (window.lenis) lenis.scrollTo(el, {offset});
+  else scrollTo({top: el.getBoundingClientRect().top + scrollY + offset, behavior:'smooth'});
+}
+document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', e => {
+  const el = document.querySelector(a.getAttribute('href'));
+  if (el){ e.preventDefault(); scrollToEl(el); }
+}));
+if (HAS_GSAP && window.ScrollTrigger && !reduceMotion){
+  gsap.utils.toArray('#skills .sec-head, #skills .step-label, .carousel, .settings .panel, .slot, #benefits .sec-head, .final h2, .final p, .final .btn')
+    .forEach(el => gsap.from(el, {y:40, opacity:0, duration:.9, ease:'expo.out', scrollTrigger:{trigger:el, start:'top 88%', once:true}}));
+  ScrollTrigger.batch('.benefit', {start:'top 85%', once:true,
+    onEnter: els => gsap.from(els, {y:50, opacity:0, duration:1, ease:'expo.out', stagger:.12})});
+  gsap.utils.toArray('.benefit .n').forEach(n => gsap.fromTo(n, {yPercent:30}, {yPercent:-30, ease:'none',
+    scrollTrigger:{trigger:n.closest('.benefit'), start:'top bottom', end:'bottom top', scrub:true}}));
+}
+
+/* старт: выбираем первое видео из ленты */
+selectSource({type:'rutube', id:SOURCES[0].id, title:SOURCES[0].title, author:SOURCES[0].author, dur:SOURCES[0].dur, thumb:SOURCES[0].thumb});
+note('');
+</script>
+</body>
+</html>
